@@ -200,10 +200,31 @@ fn chamfered_corners_make_an_eight_sided_outline() {
     );
 }
 
+/// Roadmap 5.2: a round outline is recognised as a full circle — two corners on it with a
+/// semicircular arc side between them either way — not refused as a mesh, also from a
+/// single-precision file.
 #[test]
-fn round_outline_is_not_a_polygon() {
+fn round_outline_is_a_circle_of_two_arc_sides() {
     let circle: Vec<P2> = (0..64).map(|i| f64::from(i) * PI / 32.0).map(|a| [30.0 + 30.0 * a.cos(), 30.0 + 30.0 * a.sin()]).collect();
-    assert!(reason(&synth::prism(&circle, &[], 5.0, [0.0; 3])).contains("round all the way round"));
+    let mesh = synth::prism(&circle, &[], 5.0, [0.0; 3]);
+    let reread = crate::stl::parse(&crate::stl::write_binary(&mesh)).expect("round trip");
+    for mesh in [&mesh, &reread] {
+        let (profile, offset) = found_profile(mesh);
+        assert_eq!(offset, [0.0; 3]);
+        assert!((profile.z - 5.0).abs() < 1e-12);
+        assert_eq!(profile.corners.len(), 2, "two corners: {:?}", profile.corners);
+        let arcs = profile.arc_sides();
+        assert_eq!(arcs.len(), 2);
+        let (Some(a), Some(b)) = (arcs[0], arcs[1]) else { panic!("two arc sides") };
+        assert!(distance(a.centre, [30.0, 30.0]) < 5e-3, "the fitted centre snaps: {a:?}");
+        assert!((a.r - 30.0).abs() < 5e-3 && distance(b.centre, a.centre) < 1e-9 && (b.r - a.r).abs() < 1e-12, "one circle: {a:?} {b:?}");
+        for c in &profile.corners {
+            assert!((distance(*c, a.centre) - a.r).abs() < 5e-3, "a corner on the circle: {c:?}");
+        }
+        assert!(profile.is_round());
+        let volume = PI * 30.0 * 30.0 * 5.0;
+        assert!((profile.volume() - volume).abs() / volume < 0.01, "volume {} vs {volume}", profile.volume());
+    }
 }
 
 /// An outline that is one long curve must be refused quickly, however finely it is faceted.
@@ -316,10 +337,10 @@ fn subdivided_outline_facets() {
 }
 
 /// A round outline of 4,000 facets alternating 1 : 3 in length is scanned once, not from every
-/// corner (which took seconds). The time bound is coarse on purpose: it guards against that
-/// rescan, not against a slow or instrumented runner.
+/// corner (which took seconds), and recognised as a circle. The time bound is coarse on
+/// purpose: it guards against that rescan, not against a slow or instrumented runner.
 #[test]
-fn uneven_round_outlines_are_refused_quickly() {
+fn uneven_round_outlines_are_recognised_quickly() {
     let steps: Vec<f64> = (0..4000).map(|i| if i % 2 == 0 { 1.0 } else { 3.0 }).collect();
     let total: f64 = steps.iter().sum();
     let mut angle = 0.0_f64;
@@ -332,9 +353,14 @@ fn uneven_round_outlines_are_refused_quickly() {
         })
         .collect();
     let started = std::time::Instant::now();
-    let why = reason(&synth::prism(&circle, &[], 5.0, [0.0; 3]));
-    assert!(why.contains("round all the way round"), "{why}");
+    let (profile, _) = found_profile(&synth::prism(&circle, &[], 5.0, [0.0; 3]));
     assert!(started.elapsed() < std::time::Duration::from_secs(30), "{:?}", started.elapsed());
+    assert_eq!(profile.corners.len(), 2, "two corners: {:?}", profile.corners);
+    let arcs = profile.arc_sides();
+    assert_eq!(arcs.len(), 2);
+    let (Some(a), Some(b)) = (arcs[0], arcs[1]) else { panic!("two arc sides") };
+    assert!(distance(a.centre, [20.0, 20.0]) < 1e-3 && (a.r - 20.0).abs() < 1e-2, "the fitted circle: {a:?}");
+    assert!(distance(b.centre, a.centre) < 1e-9 && (b.r - a.r).abs() < 1e-12, "one circle: {b:?}");
 }
 
 /// Corners rounded almost all the way along the short sides leave short straight sides
@@ -562,6 +588,29 @@ fn arc_sides_keep_the_exact_fit_and_only_the_params_snap() {
     let arcs: Vec<ArcSide> = profile.arc_sides().iter().flatten().copied().collect();
     // Centre and radius snap to 1 um, and the radius covers half the snapped chord (10.001 / 2).
     assert_eq!(arcs, vec![ArcSide { centre: [5.0, 5.0], r: 5.0005 }], "the params snap to 1 um");
+}
+
+/// A run all the way round one circle reads as a round outline: the run's two farthest corners
+/// (opposite each other on the circle) with a semicircular arc side between them either way, and
+/// no rounded corners.
+#[test]
+fn a_round_outline_reads_as_two_corners_and_two_semicircles() {
+    use super::super::outline::outline_shape;
+    let seg = 48;
+    let outline: Vec<P2> = (0..seg)
+        .map(|i| {
+            let t = 2.0 * PI * f64::from(i) / f64::from(seg);
+            [12.0 + 8.0 * t.cos(), 12.0 + 8.0 * t.sin()]
+        })
+        .collect();
+    let (corners, fillet, side_arcs) = outline_shape(&outline, 0.001).expect("a round outline");
+    assert_eq!(corners.len(), 2, "{corners:?}");
+    assert!(fillet.is_empty(), "{fillet:?}");
+    assert_eq!(side_arcs.len(), 2);
+    let (Some(a), Some(b)) = (side_arcs[0], side_arcs[1]) else { panic!("two arc sides") };
+    assert!(distance(a.centre, [12.0, 12.0]) < 1e-9 && (a.r - 8.0).abs() < 1e-9, "the fitted circle: {a:?}");
+    assert!(distance(b.centre, a.centre) < 1e-12 && (a.r - b.r).abs() < 1e-12, "both semicircles of one circle: {b:?}");
+    assert!((distance(corners[0], corners[1]) - 16.0).abs() < 1e-9, "opposite corners: {corners:?}");
 }
 
 /// A zigzag of straight sides whose corners alternate between gentle left and right turns

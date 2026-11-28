@@ -1312,6 +1312,54 @@ fn chord_arc_junctions_get_no_tangent_constraint() {
     assert_eq!(tangents, 0, "the chord is not tangent to its arc's circle: no Tangent constraint");
 }
 
+/// Roadmap 5.2: a round outline is recognised as a profile of two corners with a semicircular
+/// arc side either way, described as a round outline, and written as a sketch of two arc curves
+/// about one shared centre point — one `arc_1_d` parameter driving the first arc's `Diameter`
+/// (the second arc's radius is tied through the shared centre, so no second parameter and no
+/// `Equal` constraint).
+#[test]
+fn a_round_outline_becomes_two_arcs_about_one_centre() {
+    let r = 25.0;
+    let centre = [25.0, 25.0];
+    let spec = ProfileSpec {
+        outline_pockets: vec![],
+        corners: vec![[centre[0] + r, centre[1]], [centre[0] - r, centre[1]]],
+        z: 6.0,
+        holes: vec![],
+        slots: vec![],
+        pads: vec![],
+        pockets: vec![],
+        bosses: vec![],
+        cutouts: vec![],
+        arcs: vec![Some(ArcSide { centre, r }), Some(ArcSide { centre, r })],
+        outline_fillet_rs: Vec::new(),
+    };
+    assert!(spec.is_round());
+    assert_eq!(spec.describe(), "A 50 x 50 x 6 mm plate with a round outline");
+    let mesh = synth::profile(&spec, 16, [0.0; 3]);
+    let reread = crate::stl::parse(&crate::stl::write_binary(&mesh)).expect("round trip");
+    let Recognition::Profile { profile, offset, .. } = recognize(&reread) else { panic!("a round profile") };
+    assert_eq!(offset, [0.0; 3]);
+    assert!(profile.is_round());
+    assert!(profile.describe().contains("a round outline"), "{}", profile.describe());
+    let json: serde_json::Value = serde_json::from_str(&profile.to_design("").to_json()).expect("valid");
+    let sketch = &json["features"][0]["sketch"];
+    let points = sketch["points"].as_array().expect("points");
+    assert_eq!(points.len(), 4, "origin, the two corners and the one centre: {points:?}");
+    let curves = sketch["curves"].as_array().expect("curves");
+    assert_eq!(curves.len(), 2, "two arc curves: {curves:?}");
+    assert!(curves.iter().all(|c| c["type"] == "arc"), "{curves:?}");
+    let centres: Vec<usize> = curves.iter().map(|c| c["c"].as_u64().expect("centre") as usize).collect();
+    assert_eq!(centres[0], centres[1], "both arcs about the shared centre point: {curves:?}");
+    let constraints = sketch["constraints"].as_array().expect("constraints");
+    let diameters: Vec<&serde_json::Value> = constraints.iter().filter(|c| c["type"] == "diameter").collect();
+    assert_eq!(diameters.len(), 1, "one Diameter constraint: {constraints:?}");
+    assert!(constraints.iter().all(|c| c["type"] != "equal"), "no redundant Equal: {constraints:?}");
+    let params: Vec<&str> = json["params"].as_array().expect("params").iter().filter_map(|p| p["name"].as_str()).collect();
+    assert!(params.contains(&"arc_1_d") && params.contains(&"extrude_len"), "{params:?}");
+    assert!(!params.contains(&"arc_2_d"), "one diameter parameter drives the circle: {params:?}");
+}
+
 /// A hole with a rounded bottom rim beneath a step carries a bottom-facing blind depth; it
 /// must be drilled from the bottom face, like a bottom counterbore — the Round head's origin
 /// must not be dropped (codex finding on #71). The rim fillet sits on the bore's bottom edge.

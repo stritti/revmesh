@@ -415,6 +415,24 @@ fn arc_polygon_dim(corners: &[[f64; 2]], arcs: &[Option<ArcSide>]) -> (Vec<bool>
         }
         dim[opp] = false;
     }
+    // Arc sides about one centre — a full circle's two semicircles — share their radius through
+    // the sketch's shared centre point, so only the first of them drives its `Diameter`.
+    for (i, arc_i) in arcs.iter().enumerate() {
+        let Some(a) = *arc_i else { continue };
+        if !dim[i] {
+            continue;
+        }
+        for (j, arc_j) in arcs.iter().enumerate().skip(i + 1) {
+            let Some(b) = *arc_j else { continue };
+            if (a.centre[0] - b.centre[0]).hypot(a.centre[1] - b.centre[1]) <= 1e-9 * a.r.max(b.r).max(1.0) {
+                dim[j] = false;
+                let known = arc_equals.iter().any(|&(x, y)| (x, y) == (i, j) || (x, y) == (j, i));
+                if !known {
+                    arc_equals.push((i, j));
+                }
+            }
+        }
+    }
     (dim, arc_equals)
 }
 

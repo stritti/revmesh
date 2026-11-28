@@ -68,8 +68,8 @@ the README's [What `auto` recognises](../README.md#what-auto-recognises).
 8. **No STEP.** mesh2cad's `brep.py` exports an exact B-rep STEP for what it cannot express
    parametrically; revmesh keeps the mesh body inside the SolidCraft design instead, with the
    reason in the import report.
-9. **Not recognised yet** (kept as mesh, with the reason): curved sides that are not circular arcs
-   and round outlines, rounded corners mixed with arc sides, only some corners
+9. **Not recognised yet** (kept as mesh, with the reason): curved sides that are not circular arcs,
+   rounded corners mixed with arc sides, only some corners
    rounded, D-shaped and other curved cut-outs, blind or slanted slots, corners rounded almost
    all the way along their sides, steps along X or Y, pockets with curved sides, bosses with a
    draft, a round or a hole, other shapes on the top face, a counterbore/countersink/rounded rim

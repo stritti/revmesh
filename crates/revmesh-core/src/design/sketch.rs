@@ -578,8 +578,9 @@ pub fn line_arc_tangent(line_from: [f64; 2], corner: [f64; 2], centre: [f64; 2],
 /// shared corner with an arc side turns gently is held tangent to the arc (as a slot's sides
 /// are), which keeps a driving diameter change solvable to first order even for a
 /// semicircular side. Arc side pairs in `arc_equals` share one radius (`Equal`, as a slot's
-/// ends do) and only the first of a pair drives. `arcs` and `arc_params` are parallel to
-/// `corners`.
+/// ends do) and only the first of a pair drives — unless they share their centre point (a full
+/// circle's two semicircles), when the shared centre ties their radii and no `Equal` is
+/// emitted. `arcs` and `arc_params` are parallel to `corners`.
 #[must_use]
 #[allow(clippy::too_many_lines)]
 pub fn polygon_sketch_arcs(
@@ -595,9 +596,21 @@ pub fn polygon_sketch_arcs(
     let mut centre_of = vec![None; n];
     for (i, arc) in arcs.iter().enumerate() {
         if let Some((centre, _)) = arc {
-            let idx = points.len();
+            // An arc side whose centre an earlier arc side already has (a full circle's two
+            // semicircles) refers to that centre point instead of adding a coincident one.
+            let shared = (0..i).find(|&j| {
+                arcs[j].is_some_and(|(c, rj)| {
+                    (c[0] - centre[0]).hypot(c[1] - centre[1]) <= 1e-9 * rj.max(arc.map_or(0.0, |(_, r)| r)).max(1.0)
+                })
+            });
+            let idx = if let Some(idx) = shared.and_then(|j| centre_of[j]) {
+                idx
+            } else {
+                let idx = points.len();
+                points.push(SketchPoint::new(format!("p{idx}"), *centre, false));
+                idx
+            };
             centre_of[i] = Some(idx);
-            points.push(SketchPoint::new(format!("p{idx}"), *centre, false));
         }
     }
     let mut curves: Vec<SketchCurve> = Vec::new();
@@ -657,7 +670,11 @@ pub fn polygon_sketch_arcs(
         }
     }
     for &(p, q) in arc_equals {
-        constraints.push(Constraint::Equal { id: format!("k{}", constraints.len() + 1), a: side_curve[p], b: side_curve[q] });
+        // Arc sides sharing their centre point are tied through it already; an `Equal` between
+        // them would be redundant.
+        if centre_of[p] != centre_of[q] {
+            constraints.push(Constraint::Equal { id: format!("k{}", constraints.len() + 1), a: side_curve[p], b: side_curve[q] });
+        }
     }
     let counters = Counters { a: n_arcs, j: 0, k: constraints.len(), l: n_lines, p: points.len() - 1 };
     Sketch { points, curves, constraints, links: vec![], counters }

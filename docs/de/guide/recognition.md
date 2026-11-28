@@ -5,6 +5,7 @@
 | Eine rechteckige Platte, Dicke entlang Z | `Sketch1` (Rechteck auf XY), `Extrude1` und `Move1` (dorthin, wo die Platte liegt) | `base_x`, `base_y`, `base_t`; die Mitte `base_cx`, `base_cy` und die Unterseite `base_z0` |
 | Eine Platte mit einer beliebigen anderen Kontur aus geraden Seiten | `Sketch1` (die Kontur auf XY, Seiten entlang X oder Y bleiben horizontal bzw. vertikal, jede Seite eine `Length`-Bemaßung, die längste schräge Seite eine `Angle` von der X-Achse), `Extrude1` und `Move1` | `extrude_len` (Dicke), `extrude_0` (Unterseite), `outline_<i>_len` pro Seite, `outline_<i>_angle` an der längsten schrägen Seite |
 | Eine Kontur mit Kreisbogen-Seiten (eine Wölbung, das runde Ende eines Stadions) | `Sketch1` (die Kontur auf XY, jede Bogen-Seite eine `arc`-Kurve mit einer `Diameter`-Bemaßung, jede gerade Seite eine `Length`-Bemaßung), `Extrude1` und `Move1` | `extrude_len`, `extrude_0`, `outline_<i>_len` pro gerader Seite, `arc_<i>_d` pro Bogen-Seite (deren Mittelpunkt ein freier Skizzenpunkt) |
+| Eine runde Kontur (ein Kreis ganz herum) | `Sketch1` (der Kreis auf XY als zwei `arc`-Kurven um einen gemeinsamen Mittelpunkt, eine `Diameter`-Bemaßung an der ersten), `Extrude1` und `Move1` | `extrude_len`, `extrude_0`, `arc_1_d` |
 | Runde vertikale Durchgangsbohrungen (8 oder mehr Facetten, die gleichmäßig um den Kreis laufen; ein Rand mit wenigen Ecken neben dem Kreis wird auf dem Rest per fixed-seed RANSAC-Kreis eingepasst) | `Hole1`, `Hole2`, … von links nach rechts nummeriert | `hole_<n>_x`, `hole_<n>_y` (wo die Bohrung in der Datei liegt), `hole_<n>_d` |
 | Eine Durchgangsbohrung mit Senkung (Counterbore), deren Senkung auf der Ober- oder Unterseite sitzt | `Hole<n>` vom Typ Counterbore (von dieser Fläche gebohrt) | `hole_<n>_d`, `hole_<n>_cbore_d`, `hole_<n>_cbore_depth` (von dieser Fläche) |
 | Eine Durchgangsbohrung mit Kegelsenkung (Countersink) auf der Ober- oder Unterseite | `Hole<n>` vom Typ Countersink | `hole_<n>_d`, `hole_<n>_csk_d` (an der Fläche), `hole_<n>_csk_angle` (der volle Kegelwinkel) |
@@ -47,7 +48,7 @@ Grund im Bericht.
 
 Diese bleiben ein Netz, mit dem Grund im Bericht:
 
-- gekrümmte Seiten, die keine Kreisbögen sind, und runde Konturen
+- gekrümmte Seiten, die keine Kreisbögen sind
 - verrundete Ecken gemischt mit Bogen-Seiten in einer Kontur
 - nur einige Ecken verrundet
 - D-förmige und andere gekrümmte Ausschnitte, Sackloch- oder schräge Langlöcher

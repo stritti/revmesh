@@ -20,7 +20,7 @@ The recognition follows [mesh2cad](https://github.com/emirmrkaljevic/mesh2cad)
 runs inside SolidCraft's WebAssembly sandbox without Python, numpy or OpenCascade.
 
 > **Status: early.** The plugin pipeline works end to end: mesh in, design out, tested in
-> SolidCraft 0.51. Recognition finds plates: any outline of straight sides or circular arc> sides (rectangles, L-shapes, brackets, chamfered or slanted sides, bulges, stadium ends) extruded along Z — or along X or Y, a part
+> SolidCraft 0.51. Recognition finds plates: any outline of straight sides or circular arc sides and round outlines (rectangles, L-shapes, brackets, chamfered or slanted sides, bulges, stadium ends, circles) extruded along Z — or along X or Y, a part
 > standing upright —, its corners parallel to that axis sharp or all rounded, each with its own radius,
 > with round through holes; and boxes with all twelve edges rounded with one radius. Everything
 > else is imported as a mesh body, with the reason in the
@@ -90,6 +90,7 @@ with the features and parameters it gets.
 | A rectangular plate, thickness along Z | `Sketch1` (rectangle on XY), `Extrude1` and `Move1` (to where the plate is) | `base_x`, `base_y`, `base_t`; the centre `base_cx`, `base_cy` and the bottom `base_z0` |
 | A plate with any other outline of straight sides | `Sketch1` (the outline on XY, sides along X or Y kept horizontal or vertical, every side a `Length` dimension, the longest slanted side an `Angle` from the X axis), `Extrude1` and `Move1` | `extrude_len` (thickness), `extrude_0` (bottom), `outline_<i>_len` per side, `outline_<i>_angle` on the longest slanted side |
 | An outline with circular arc sides (a bulge, a stadium's round end) | `Sketch1` (the outline on XY, each arc side an `arc` curve with a `Diameter` dimension, each straight side a `Length` dimension), `Extrude1` and `Move1` | `extrude_len`, `extrude_0`, `outline_<i>_len` per straight side, `arc_<i>_d` per arc side (its centre a free sketch point) |
+| A round outline (a circle all the way round) | `Sketch1` (the circle on XY as two `arc` curves about one shared centre point, one `Diameter` dimension on the first), `Extrude1` and `Move1` | `extrude_len`, `extrude_0`, `arc_1_d` |
 | Any of those outlines extruded along X or Y (a part standing upright) | `Sketch1` on the YZ or XZ plane (the profile's coordinates are the sketch coordinates there), `Extrude1` along that axis, `Move1` | `extrude_len`, `extrude_0` (along the axis); the holes' and slots' positions named after the profile plane's world axes, e.g. `hole_1_y`, `hole_1_z` on an X extrusion |
 | Round vertical through holes (8 or more facets going evenly round the circle) | `Hole1`, `Hole2`, … numbered from left to right | `hole_<n>_x`, `hole_<n>_y` (where the hole is in the file), `hole_<n>_d` |
 | A counterbored through hole, its counterbore on the top or the bottom face | `Hole<n>` of type counterbore (drilled from that face) | `hole_<n>_d`, `hole_<n>_cbore_d`, `hole_<n>_cbore_depth` (from that face) |
@@ -132,7 +133,7 @@ angle is written as single holes. A chamfered
 corner is simply one more straight side, so it comes over exactly. The rebuilt part must match
 the mesh's volume within 1%, otherwise the mesh is kept. The import report notes how much the
 volume changed because round facets became true circles. Not recognised yet (kept as a mesh, with the
-reason): curved sides that are not circular arcs and round outlines, rounded corners mixed with arc sides, only some corners rounded,
+reason): curved sides that are not circular arcs, rounded corners mixed with arc sides, only some corners rounded,
 D-shaped and other curved cut-outs, blind or slanted slots, corners rounded almost all the way along their sides,
 steps along X or Y, pockets with curved sides, bosses with a draft, a round or a hole, other shapes on the top face,
 shaped bosses or pads on a side wall, a counterbore, countersink or

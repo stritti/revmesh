@@ -7,10 +7,11 @@ sobald release-please das nächste Release (v0.4.0) schneidet. Die Tags liest ma
 
 ## Offene Punkte, priorisiert
 
-1. **Rest von Punkt 5.2** — runde Konturen, D-förmige Ausschnitte, Ausschnitte mit verrundeten
-   Ecken und konkave Bogen-Seiten importieren noch als Netz. Als Nächstes in der Reihenfolge der
-   Roadmap selbst (nacharbeitbare Skizzen sind das, was revmesh jenseits der mesh2cad-Parität
-   ausmacht) und baut direkt auf den soeben hinzugekommenen Bogen-Seiten von 5.2 auf.
+1. **Rest von Punkt 5.2** — D-förmige Ausschnitte, Ausschnitte mit verrundeten Ecken und
+   konkave Bogen-Seiten importieren noch als Netz (runde Konturen sind erledigt,
+   **unveröffentlicht**). Als Nächstes in der Reihenfolge der Roadmap selbst (nacharbeitbare
+   Skizzen sind das, was revmesh jenseits der mesh2cad-Parität ausmacht) und baut direkt auf den
+   soeben hinzugekommenen Bogen-Seiten von 5.2 auf.
 2. **Konvertieren eines Mesh-Bodies, der bereits in der offenen Konstruktion liegt**
    ([Issue #70](https://github.com/stritti/revmesh/issues/70)): der Spike
    ([research/convert-mesh-body.md](https://github.com/stritti/revmesh/blob/main/research/convert-mesh-body.md))
@@ -82,7 +83,10 @@ sobald release-please das nächste Release (v0.4.0) schneidet. Die Tags liest ma
       (`polygon_sketch_arcs`, `crates/revmesh-core/src/design/sketch.rs`; erkannt als
       `ProfileSpec::arcs` in `plate/outline.rs::outline_shape` und als `CutoutSpec::arcs` in
       `plate/holes.rs::cutout_shape`, das einen Ausschnitt-Ring wie eine Kontur liest und ihn nur mit
-      Bogen-Seiten und ohne verrundete Ecken annimmt) — runde Konturen, D-förmige Ausschnitte,
+      Bogen-Seiten und ohne verrundete Ecken annimmt) — runde Konturen (erledigt,
+      **unveröffentlicht**: ein Lauf einmal ganz um einen Kreis herum wird als zwei
+      gegenüberliegende Ecken mit je einer Halbkreis-Bogen-Seite gelesen, wobei die beiden Bögen
+      einen Mittelpunkt teilen und ein `arc_1_d` den `Diameter` treibt) — D-förmige Ausschnitte,
       Ausschnitte mit verrundeten Ecken und konkave Bogen-Seiten bleiben ein Netz
    3. (erledigt in v0.1.0-beta.6–v0.2.0 für Taschen beliebiger geradliniger Kontur, für Stufen von der Oberseite mehrere
       Ebenen tief entlang Z, für gesenkte Bohrungen, die auf der Ebene einer Stufe öffnen — von der

@@ -6,10 +6,10 @@ Tags are read from the `chore: release` commits and `CHANGELOG.md` — never inv
 
 ## Open points, prioritised
 
-1. **Item 5.2 remainder** — round outlines, D-shaped cut-outs, rounded-corner cut-outs and
-   concave arc sides still import as a mesh. Next in the roadmap's own sequence (reworkable
-   sketches are what sets revmesh apart beyond mesh2cad parity) and builds directly on the arc
-   sides 5.2 just added.
+1. **Item 5.2 remainder** — D-shaped cut-outs, rounded-corner cut-outs and concave arc sides
+   still import as a mesh (round outlines are done, **unreleased**). Next in the roadmap's own
+   sequence (reworkable sketches are what sets revmesh apart beyond mesh2cad parity) and builds
+   directly on the arc sides 5.2 just added.
 2. **Converting a mesh body already in the open design** ([issue #70](https://github.com/stritti/revmesh/issues/70)):
    the spike ([research/convert-mesh-body.md](https://github.com/stritti/revmesh/blob/main/research/convert-mesh-body.md))
    showed this needs a second `command-plugin` package — a separate feature track after the
@@ -77,8 +77,10 @@ Tags are read from the `chore: release` commits and `CHANGELOG.md` — never inv
       (`polygon_sketch_arcs`, `crates/revmesh-core/src/design/sketch.rs`; recognised as
       `ProfileSpec::arcs` in `plate/outline.rs::outline_shape` and as `CutoutSpec::arcs` in
       `plate/holes.rs::cutout_shape`, which reads a cut-out's loop like an outline and accepts
-      it only with arc sides and no rounded corners) — round outlines, D-shaped cut-outs,
-      rounded-corner cut-outs and concave arc sides stay a mesh
+      it only with arc sides and no rounded corners) — round outlines (done, **unreleased**: a
+      run all the way round one circle is read as two opposite corners with a semicircular arc
+      side either way, the two arcs sharing one centre point and one `arc_1_d` driving the
+      `Diameter`) — D-shaped cut-outs, rounded-corner cut-outs and concave arc sides stay a mesh
    3. (done in v0.1.0-beta.6–v0.2.0 for pockets of any straight-sided outline, for steps down from the top face
       several levels deep along Z, for headed holes opening on a step's level — measured from
       the level and drilled from it, a rounded rim filleted on the pocket's start edge — and

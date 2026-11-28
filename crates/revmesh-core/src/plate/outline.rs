@@ -11,9 +11,11 @@ use std::f64::consts::PI;
 
 /// Reads `outline` (counter-clockwise) as a polygon of sides whose corners are all sharp or all
 /// rounded (each with its own radius), where any side may instead be a circular arc (a curved
-/// side). Returns the corners as if they were sharp, one radius per corner parallel to them
-/// (empty when every corner is sharp), and for each side the arc it is (`None` for a straight
-/// side).
+/// side). A run all the way round one circle is a round outline, read as two corners opposite
+/// each other on the circle with a semicircular arc side between them either way (a full
+/// circle is two arc sides: the sketch's curves are lines and arcs). Returns the corners as if
+/// they were sharp, one radius per corner parallel to them (empty when every corner is
+/// sharp), and for each side the arc it is (`None` for a straight side).
 #[allow(clippy::too_many_lines)] // one scan, read best in one piece
 #[allow(clippy::type_complexity)] // corners, radius per corner, arc per side
 pub(super) fn outline_shape(outline: &[P2], tol: f64) -> Result<(Vec<P2>, Vec<f64>, Vec<Option<ArcSide>>), String> {
@@ -127,8 +129,9 @@ pub(super) fn outline_shape(outline: &[P2], tol: f64) -> Result<(Vec<P2>, Vec<f6
 
     // A curved side is a run of at least three gentle facets — none part of a rounded corner,
     // the corners at each facet's ends turning a little the same way — whose corners lie on one
-    // circle: an arc side from the run's first corner to its last. A gentle run on no circle is
-    // a non-circular curve, and a run all the way round a round outline; both are refused.
+    // circle: an arc side from the run's first corner to its last. A run all the way round one
+    // circle is a round outline (read below as two corners and two semicircle arc sides); a
+    // gentle run on no circle is a non-circular curve and is refused.
     // Length only decides whether a run carries on: a curve's first facet may follow a much
     // longer straight side.
     // A facet curves when a corner at either of its ends turns gently: a run may start right
@@ -230,7 +233,25 @@ pub(super) fn outline_shape(outline: &[P2], tol: f64) -> Result<(Vec<P2>, Vec<f6
                 return Err("the outline has a concave arc side (only convex arc sides are recognised so far)".into());
             }
             if span == n || sweep >= 2.0 * PI - 1e-6 {
-                return Err("the outline is round all the way round (round outlines are not recognised yet)".into());
+                // A run all the way round one circle is a round outline: two corners, the
+                // farthest pair of the run's (nearly opposite on the circle), with a semicircular
+                // arc side from the first to the second and one back. The sketch's curves are
+                // lines and arcs, so a full circle is written as the two arcs.
+                let mut best = (lo, lo + 1, 0.0);
+                for a in lo..hi {
+                    for b in (a + 1)..=hi {
+                        let d = distance(v[a % n], v[b % n]);
+                        if d > best.2 {
+                            best = (a, b, d);
+                        }
+                    }
+                }
+                let (mut a, mut b) = (best.0, best.1);
+                if (b + n - a) % n > n / 2 {
+                    std::mem::swap(&mut a, &mut b);
+                }
+                let arc = ArcSide { centre, r };
+                return Ok((vec![v[a % n], v[b % n]], Vec::new(), vec![Some(arc), Some(arc)]));
             }
             arc_sides.push((lo % n, hi % n, centre, r));
         }

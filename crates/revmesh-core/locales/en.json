@@ -31,6 +31,7 @@
   "summary.with": "{plate} with {parts}",
   "summary.list": "{rest} and {last}",
   "summary.outline": "a {n}-sided outline",
+  "summary.round_outline": "a round outline",
   "summary.hole.one": "1 hole",
   "summary.hole.other": "{n} holes",
   "summary.slot.one": "1 slot",

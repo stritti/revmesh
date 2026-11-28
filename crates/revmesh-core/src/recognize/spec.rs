@@ -349,6 +349,7 @@ impl PlateSpec {
         describe(
             locale,
             [self.x, self.y, self.z],
+            false,
             None,
             [
                 self.holes.len(),
@@ -469,6 +470,19 @@ impl ProfileSpec {
         if self.arcs.len() == self.corners.len() { &self.arcs } else { &[] }
     }
 
+    /// Whether the outline is a full circle: every side an arc about one and the same centre
+    /// (recognised as two corners with a semicircle between them either way).
+    #[must_use]
+    pub fn is_round(&self) -> bool {
+        let arcs = self.arc_sides();
+        arcs.len() == self.corners.len()
+            && self.corners.len() >= 2
+            && arcs.windows(2).all(|w| match (w[0], w[1]) {
+                (Some(a), Some(b)) => (a.centre[0] - b.centre[0]).hypot(a.centre[1] - b.centre[1]) <= 1e-9 * a.r.max(b.r).max(1.0),
+                _ => false,
+            })
+    }
+
     /// One line describing the plate, for the loss report.
     #[must_use]
     pub fn describe(&self) -> String {
@@ -482,6 +496,7 @@ impl ProfileSpec {
         describe(
             locale,
             [size[0], size[1], self.z],
+            self.is_round(),
             Some(self.corners.len()),
             [
                 self.holes.len(),
@@ -580,12 +595,23 @@ fn blocks(pads: &[PadSpec], pockets: &[PocketSpec]) -> f64 {
     pads.iter().map(|p| p.w * p.l * p.h).sum::<f64>() - pockets.iter().map(|p| p.w * p.l * p.depth).sum::<f64>()
 }
 
-/// `counts` are the holes, the slots, the bosses, the cut-outs, the pads and the pockets.
-fn describe(locale: Locale, size: [f64; 3], sides: Option<usize>, counts: [usize; 6], fillet_rs: &[f64], edge_r: Option<f64>) -> String {
+/// `counts` are the holes, the slots, the bosses, the cut-outs, the pads and the pockets. A
+/// `round` outline (a full circle) is described as such, not as an `n`-sided one.
+fn describe(
+    locale: Locale,
+    size: [f64; 3],
+    round: bool,
+    sides: Option<usize>,
+    counts: [usize; 6],
+    fillet_rs: &[f64],
+    edge_r: Option<f64>,
+) -> String {
     let number = |v: f64| locale.decimal(&fmt_number(v));
     let [x, y, z] = size.map(number);
     let mut parts = Vec::new();
-    if let Some(n) = sides {
+    if round {
+        parts.push(locale.text("summary.round_outline").to_owned());
+    } else if let Some(n) = sides {
         parts.push(locale.format("summary.outline", &[("n", &n)]));
     }
     for (n, kind) in counts.into_iter().zip(["hole", "slot", "boss", "cutout", "pad", "pocket"]) {
